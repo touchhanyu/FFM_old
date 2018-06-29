@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:util="http://www.springframework.org/schema/util"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+	http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.3.xsd">
+
+	<bean id="cacheManager" class="org.apache.shiro.cache.ehcache.EhCacheManager">
+		<property name="cacheManagerConfigFile" value="classpath:cfg/ehcache.xml" />
+	</bean>
+	<bean id="credentialsMatcher" class="com.ffm.security.realm.RetryLimitHashedCredentialsMatcher">
+		<constructor-arg ref="cacheManager" />
+		<property name="hashAlgorithmName" value="md5" />
+		<property name="hashIterations" value="1" />
+		<property name="storedCredentialsHexEncoded" value="true" />
+	</bean>
+	<bean id="customRealm" class="com.ffm.security.realm.CustomRealm">
+		<property name="credentialsMatcher" ref="credentialsMatcher" />
+	</bean>
+	<!-- 安全管理器 -->
+	<bean id="securityManager" class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
+		<property name="realm" ref="customRealm" />
+	</bean>
+	<bean id="shiroFilter" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
+		<property name="securityManager" ref="securityManager" />
+		<property name="loginUrl" value="/login/loginPage" />
+		<property name="successUrl" value="/main" />
+		<property name="unauthorizedUrl" value="/403" />
+		<property name="filterChainDefinitions">
+			<value>
+				/assets/** = anon
+				/plugins/** = anon
+				/login/** = anon
+				/** = authc
+			</value>
+		</property>
+		<property name="filters">
+			<util:map>
+				<entry key="permission" value-ref="permission" />
+			</util:map>
+		</property>
+	</bean>
+	<bean name="permission" class="com.ffm.security.realm.CustomUrlAuthorizationFilter" />
+	<!-- session管理器 -->
+	<bean id="sessionManager" class="org.apache.shiro.web.session.mgt.DefaultWebSessionManager">
+		<property name="sessionIdUrlRewritingEnabled" value="false" />
+		<!-- 全局会话超时时间，30分钟 -->
+		<property name="globalSessionTimeout" value="1800000" />
+		<!-- 删除失效的session -->
+		<property name="deleteInvalidSessions" value="true" />
+	</bean>
+</beans>
